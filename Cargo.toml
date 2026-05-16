@@ -8,7 +8,7 @@ members = [
 [workspace.package]
 version      = "0.1.0"
 edition      = "2021"
-authors      = ["Felipe Abreu <gabrielepim0@gmail.com>"]
+authors      = ["Felipe Abreu <fabreum.dev@gmail.com>"]
 license      = "GPL-3.0"
 repository   = "https://github.com/Felipe-Abreu/Clypse"
 rust-version = "1.75"

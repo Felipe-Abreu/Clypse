@@ -1,0 +1,11 @@
+clypse (0.1.0-1) unstable; urgency=medium
+
+  * Complete rewrite in Rust (from Python/PyQt6 prototype)
+  * GTK4 + libadwaita native UI
+  * Wayland zwlr-data-control-v1 event-driven clipboard monitoring
+  * SQLite WAL + FTS5 full-text search history
+  * systemd user service with Type=notify watchdog
+  * Favorites system with persistent protection from auto-eviction
+  * Renamed project from Nebulip to Clypse
+
+ -- Felipe Abreu <gabrielepim0@gmail.com>  Sat, 16 May 2026 00:00:00 +0000

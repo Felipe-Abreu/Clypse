@@ -1,0 +1,33 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export CARGO_HOME = $(CURDIR)/debian/cargo-home
+export PATH := $(HOME)/.cargo/bin:$(PATH)
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	@if [ ! -f target/release/clypse ] || [ ! -f target/release/clypse-daemon ]; then \
+		cargo build --release; \
+	fi
+
+override_dh_auto_install:
+	install -Dm755 target/release/clypse-daemon \
+		debian/clypse/usr/bin/clypse-daemon
+	install -Dm755 target/release/clypse \
+		debian/clypse/usr/bin/clypse
+	install -Dm644 data/io.github.clypse.Clypse.desktop \
+		debian/clypse/usr/share/applications/io.github.clypse.Clypse.desktop
+	install -Dm644 data/io.github.clypse.Clypse.metainfo.xml \
+		debian/clypse/usr/share/metainfo/io.github.clypse.Clypse.metainfo.xml
+	install -Dm644 data/io.github.clypse.Clypse.svg \
+		debian/clypse/usr/share/icons/hicolor/scalable/apps/io.github.clypse.Clypse.svg
+	install -Dm644 data/systemd/clypse-daemon.system.service \
+		debian/clypse/usr/lib/systemd/user/clypse-daemon.service
+
+override_dh_auto_test:
+	@echo "Skipping cargo test during dpkg-buildpackage"
+
+override_dh_auto_clean:
+	@echo "Skipping cargo clean during dpkg-buildpackage"

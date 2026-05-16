@@ -1,0 +1,27 @@
+[Unit]
+Description=Clypse Clipboard Daemon
+Documentation=https://github.com/clypse/clypse
+After=graphical-session.target
+PartOf=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/clypse-daemon
+Restart=on-failure
+RestartSec=2
+RestartPreventExitStatus=0
+TimeoutStartSec=15
+TimeoutStopSec=5
+
+NotifyAccess=main
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=clypse-daemon
+
+NoNewPrivileges=true
+WatchdogSec=30
+
+[Install]
+WantedBy=graphical-session.target

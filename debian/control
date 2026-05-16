@@ -1,0 +1,25 @@
+Source: clypse
+Section: utils
+Priority: optional
+Maintainer: Felipe Abreu <gabrielepim0@gmail.com>
+Build-Depends: debhelper-compat (= 13), cargo, rustc, libgtk-4-dev, libadwaita-1-dev, libsqlite3-dev, pkg-config
+Standards-Version: 4.6.2
+Homepage: https://github.com/clypse/clypse
+Rules-Requires-Root: no
+
+Package: clypse
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libgtk-4-1, libadwaita-1-0
+Recommends: wtype | xdotool
+Description: Modern clipboard manager for Linux (Wayland & X11)
+ Clypse is a fast, native clipboard manager built with Rust, GTK4 and
+ libadwaita. It uses the zwlr-data-control-v1 Wayland protocol for
+ event-driven clipboard monitoring without polling.
+ .
+ Features:
+  - Persistent SQLite history with FTS5 full-text search
+  - Favorites system — starred items are never auto-deleted
+  - Real-time clipboard capture via Wayland wlr-data-control protocol
+  - Native GTK4/libadwaita UI following GNOME/COSMIC HIG
+  - systemd user service with sd_notify(READY=1) integration
+  - Hash-based deduplication — no duplicate entries

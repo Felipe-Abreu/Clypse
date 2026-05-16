@@ -1,0 +1,59 @@
+[package]
+name        = "clypse-daemon"
+version.workspace    = true
+edition.workspace    = true
+authors.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[[bin]]
+name = "clypse-daemon"
+path = "src/main.rs"
+
+[dependencies]
+anyhow     = { workspace = true }
+thiserror  = { workspace = true }
+serde      = { workspace = true }
+serde_json = { workspace = true }
+tokio      = { workspace = true }
+tracing    = { workspace = true }
+tracing-subscriber = { workspace = true }
+dirs       = { workspace = true }
+
+# Clipboard — Wayland
+# wl-clipboard-rs: usado somente para copy (ownership takeback)
+wl-clipboard-rs = "0.8"
+# Protocolo zwlr_data_control_v1 — implementação nativa event-driven
+wayland-client          = "0.31"
+wayland-protocols-wlr   = { version = "0.2", features = ["client"] }
+# Unix pipes para receber conteúdo do clipboard via FD
+os_pipe = "1"
+
+# Clipboard — X11 fallback
+[target.'cfg(unix)'.dependencies]
+x11rb = { version = "0.13", features = ["xfixes", "allow-unsafe-code"], optional = true }
+
+# Database
+rusqlite = { version = "0.32", features = ["bundled", "hooks"] }
+
+# Content hashing (dedup)
+sha2 = "0.10"
+hex  = "0.4"
+
+# MIME detection
+mime_guess = "2"
+
+# Config file (TOML)
+toml = "0.8"
+
+# IPC: Unix socket line-delimited JSON
+tokio-util = { version = "0.7", features = ["codec"] }
+bytes      = "1"
+
+# systemd notification (sd_notify)
+libsystemd = { version = "0.7", optional = true }
+
+[features]
+default  = []
+systemd  = ["libsystemd"]
+x11      = ["x11rb"]

@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    REAL_USER="${SUDO_USER:-$(logname 2>/dev/null || true)}"
+
+    if [ -n "$REAL_USER" ] && id "$REAL_USER" >/dev/null 2>&1; then
+        REAL_UID=$(id -u "$REAL_USER")
+        XDG_RUNTIME="/run/user/${REAL_UID}"
+        DBUS_ADDR="unix:path=${XDG_RUNTIME}/bus"
+
+        runuser -u "$REAL_USER" -- \
+            env XDG_RUNTIME_DIR="$XDG_RUNTIME" \
+                DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" \
+            systemctl --user disable --now clypse-daemon.service 2>/dev/null || true
+    fi
+fi
+
+#DEBHELPER#

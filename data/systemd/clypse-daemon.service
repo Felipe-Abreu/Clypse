@@ -1,0 +1,34 @@
+[Unit]
+Description=Clypse Clipboard Daemon
+Documentation=https://github.com/clypse/clypse
+# Inicia APÓS a sessão gráfica estar estabelecida.
+# Garante que WAYLAND_DISPLAY e XDG_RUNTIME_DIR estejam disponíveis.
+After=graphical-session.target
+PartOf=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=notify
+ExecStart=%h/.local/bin/clypse-daemon
+Restart=on-failure
+RestartSec=2
+RestartPreventExitStatus=0
+TimeoutStartSec=15
+TimeoutStopSec=5
+
+# O daemon usa sd_notify() para sinalizar READY=1
+NotifyAccess=main
+
+# Logging estruturado via journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=clypse-daemon
+
+# Hardening básico (sem namespace isolation para compatibilidade máxima)
+NoNewPrivileges=true
+
+# Watchdog: se o daemon travar por 30s, o systemd reinicia
+WatchdogSec=30
+
+[Install]
+WantedBy=graphical-session.target

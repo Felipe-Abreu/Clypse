@@ -163,8 +163,8 @@ fn show_about() {
         .application_icon(APP_ID)
         .developer_name("Felipe Abreu")
         .version(env!("CARGO_PKG_VERSION"))
-        .website("https://github.com/clypse/clypse")
-        .issue_url("https://github.com/clypse/clypse/issues")
+        .website("https://github.com/Felipe-Abreu/Clypse")
+        .issue_url("https://github.com/Felipe-Abreu/Clypse/issues")
         .license_type(gtk4::License::Gpl30)
         .comments(
             "A modern, fast clipboard manager for Linux.\n\

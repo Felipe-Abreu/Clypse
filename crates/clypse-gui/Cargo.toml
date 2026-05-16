@@ -32,3 +32,6 @@ which      = "6"
 
 # System tray (StatusNotifierItem — COSMIC/GNOME/KDE panel)
 ksni       = "0.2"
+
+# Leitura/escrita do config TOML do daemon
+toml       = "0.8"

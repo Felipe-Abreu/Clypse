@@ -112,6 +112,7 @@ impl ClypseWindow {
 
         // Menu dropdown
         let menu = gio::Menu::new();
+        menu.append(Some("Preferences"),  Some("app.preferences"));
         menu.append(Some("About Clypse"), Some("app.about"));
         menu.append(Some("Quit"),         Some("app.quit"));
         menu_btn.set_menu_model(Some(&menu));
@@ -273,45 +274,74 @@ impl ClypseWindow {
             };
             if item_id == 0 { return; }
 
-            // Busca conteúdo do estado local (evita round-trip ao daemon)
-            let content = {
+            // Extrai todos os campos necessários do estado local
+            let (content, blob_path, mime_type) = {
                 let guard = items.borrow();
-                guard.iter().find(|i| i.id == item_id).and_then(|i| i.content.clone())
+                match guard.iter().find(|i| i.id == item_id) {
+                    Some(item) => (item.content.clone(), item.blob_path.clone(), item.mime_type.clone()),
+                    None => return,
+                }
             };
 
-            let Some(text) = content else {
-                tracing::debug!("Item {} is binary — cannot paste as text", item_id);
-                let toast = adw::Toast::new("Binary content copied (text unavailable)");
-                toast.set_timeout(2);
-                toast_overlay.add_toast(toast);
-                return;
-            };
+            tracing::debug!("Activated item id={} mime={}", item_id, mime_type);
 
-            // 1. Escreve no clipboard GDK (transparente Wayland/X11)
-            if let Some(display) = gtk4::gdk::Display::default() {
-                display.clipboard().set_text(&text);
+            match content {
+                Some(text) => {
+                    // ── Texto: escreve no clipboard e dispara auto-paste ──────────
+                    if let Some(display) = gtk4::gdk::Display::default() {
+                        display.clipboard().set_text(&text);
+                    }
+                    let toast = adw::Toast::new("Copied — press Ctrl+V to paste");
+                    toast.set_timeout(2);
+                    toast_overlay.add_toast(toast);
+
+                    let win_clone = window.clone();
+                    glib::timeout_add_local_once(
+                        std::time::Duration::from_millis(120),
+                        move || { win_clone.set_visible(false); },
+                    );
+                    std::thread::spawn(move || {
+                        std::thread::sleep(std::time::Duration::from_millis(600));
+                        try_auto_paste();
+                    });
+                }
+
+                None => {
+                    // ── Imagem/binário: lê o arquivo e define o ContentProvider ───
+                    if let Some(path) = blob_path {
+                        match std::fs::read(&path) {
+                            Ok(bytes) => {
+                                let glib_bytes = glib::Bytes::from_owned(bytes);
+                                let provider = gtk4::gdk::ContentProvider::for_bytes(
+                                    &mime_type,
+                                    &glib_bytes,
+                                );
+                                if let Some(display) = gtk4::gdk::Display::default() {
+                                    let _ = display.clipboard().set_content(Some(&provider));
+                                }
+                                let toast = adw::Toast::new("Image copied to clipboard");
+                                toast.set_timeout(2);
+                                toast_overlay.add_toast(toast);
+                                let win_clone = window.clone();
+                                glib::timeout_add_local_once(
+                                    std::time::Duration::from_millis(120),
+                                    move || { win_clone.set_visible(false); },
+                                );
+                            }
+                            Err(e) => {
+                                tracing::warn!("Cannot read image blob {}: {}", path, e);
+                                let toast = adw::Toast::new("Image file missing — recopy to restore");
+                                toast.set_timeout(3);
+                                toast_overlay.add_toast(toast);
+                            }
+                        }
+                    } else {
+                        let toast = adw::Toast::new("Binary content — cannot copy");
+                        toast.set_timeout(2);
+                        toast_overlay.add_toast(toast);
+                    }
+                }
             }
-
-            tracing::debug!("Activated item id={}", item_id);
-
-            // 2. Toast breve visível antes de fechar a janela
-            let toast = adw::Toast::new("Copied — press Ctrl+V to paste");
-            toast.set_timeout(2);
-            toast_overlay.add_toast(toast);
-
-            // 3. Fecha a janela após 120 ms (toast fica visível um instante)
-            let win_clone = window.clone();
-            glib::timeout_add_local_once(
-                std::time::Duration::from_millis(120),
-                move || { win_clone.set_visible(false); },
-            );
-
-            // 4. Simulação de paste best-effort (requer wtype, ydotool ou xdotool)
-            std::thread::spawn(move || {
-                // Aguarda janela fechar + compositor transferir foco para janela anterior
-                std::thread::sleep(std::time::Duration::from_millis(600));
-                try_auto_paste();
-            });
         });
     }
 
@@ -377,15 +407,33 @@ fn build_row(item: &ClipItem, cmd_tx: &SyncSender<GuiCommand>) -> adw::ActionRow
     let row = adw::ActionRow::new();
     row.set_activatable(true);
 
-    // Ícone MIME (prefix)
-    let icon = gtk4::Image::from_icon_name(mime_to_icon(&item.mime_type));
-    icon.add_css_class("dim-label");
-    row.add_prefix(&icon);
+    // Prefix: thumbnail para imagens, ícone MIME para texto
+    if item.mime_type.starts_with("image/") {
+        if let Some(ref path) = item.blob_path {
+            let pic = gtk4::Picture::for_filename(path);
+            pic.set_can_shrink(true);
+            pic.set_content_fit(gtk4::ContentFit::Cover);
+            pic.set_size_request(48, 48);
+            row.add_prefix(&pic);
+        } else {
+            let icon = gtk4::Image::from_icon_name("image-x-generic-symbolic");
+            icon.add_css_class("dim-label");
+            row.add_prefix(&icon);
+        }
+    } else {
+        let icon = gtk4::Image::from_icon_name(mime_to_icon(&item.mime_type));
+        icon.add_css_class("dim-label");
+        row.add_prefix(&icon);
+    }
 
-    // Preview — primeira linha, truncada em 80 chars
-    let raw        = item.content.as_deref().unwrap_or("[binary]");
-    let first_line = raw.lines().next().unwrap_or("").trim();
-    let preview    = truncate_chars(first_line, 80);
+    // Preview — imagens mostram tipo, texto mostra primeira linha truncada em 80 chars
+    let preview = if item.mime_type.starts_with("image/") {
+        friendly_mime(&item.mime_type).to_string()
+    } else {
+        let raw        = item.content.as_deref().unwrap_or("[binary]");
+        let first_line = raw.lines().next().unwrap_or("").trim();
+        truncate_chars(first_line, 80)
+    };
     row.set_title(&glib::markup_escape_text(&preview));
     row.set_subtitle(&format!(
         "{} · {}",

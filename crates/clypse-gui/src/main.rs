@@ -1,4 +1,5 @@
 mod ipc_client;
+mod settings;
 mod tray;
 mod window;
 
@@ -82,6 +83,14 @@ fn main() -> Result<()> {
     let about = gio::SimpleAction::new("about", None);
     about.connect_activate(|_, _| show_about());
     app.add_action(&about);
+
+    let preferences = gio::SimpleAction::new("preferences", None);
+    preferences.connect_activate(|_, _| {
+        let win = gtk4::Application::default().active_window();
+        settings::show(win.as_ref());
+    });
+    app.add_action(&preferences);
+    app.set_accels_for_action("app.preferences", &["<Ctrl>comma"]);
 
     let code = app.run();
     std::process::exit(code.value());

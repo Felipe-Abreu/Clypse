@@ -3,7 +3,7 @@ BINDIR     := $(PREFIX)/bin
 DATADIR    := $(PREFIX)/share
 SYSTEMD_USER_DIR := $(HOME)/.config/systemd/user
 
-CARGO      := $(HOME)/.cargo/bin/cargo
+CARGO      := $(shell which cargo 2>/dev/null || echo $(HOME)/.cargo/bin/cargo)
 RELEASE    := --release
 PROFILE    := release
 TARGET_DIR := target/$(PROFILE)

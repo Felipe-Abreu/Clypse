@@ -137,10 +137,16 @@ fn process_clipboard_event(
         (None, event.mime_type.clone())
     };
 
+    let blob_path = if content.is_none() {
+        save_image_blob(&event.hash, &event.data, &event.mime_type)
+    } else {
+        None
+    };
+
     let new_item = NewItem {
         hash:      &event.hash,
         content:   content.as_deref(),
-        blob_path: None, // TODO: implementar storage de imagens em disco
+        blob_path: blob_path.as_deref(),
         mime_type: &mime_type,
         byte_size: event.data.len(),
     };
@@ -181,6 +187,21 @@ fn process_clipboard_event(
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/// Grava os bytes de uma imagem em `~/.local/share/clypse/images/` e retorna o caminho.
+fn save_image_blob(hash: &str, data: &[u8], mime_type: &str) -> Option<String> {
+    let images_dir = Config::images_dir();
+    std::fs::create_dir_all(&images_dir).ok()?;
+    // "image/svg+xml" → "svg"
+    let ext = mime_type.split('/').nth(1).unwrap_or("bin")
+        .split('+').next().unwrap_or("bin");
+    let filename = format!("{}.{}", &hash[..16], ext);
+    let path = images_dir.join(&filename);
+    if !path.exists() {
+        std::fs::write(&path, data).ok()?;
+    }
+    path.to_str().map(str::to_string)
+}
 
 fn is_text_mime(mime: &str) -> bool {
     mime.starts_with("text/") || mime == "application/json" || mime == "application/xml"

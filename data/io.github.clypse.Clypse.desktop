@@ -8,8 +8,11 @@ Icon=io.github.clypse.Clypse
 Terminal=false
 Categories=Utility;
 Keywords=clipboard;copy;paste;history;
-# app-id deve ser idêntico ao application_id no código GTK4.
-# O compositor Wayland usa isso para associar a janela ao ícone na dock.
 StartupWMClass=io.github.clypse.Clypse
 StartupNotify=true
 X-GNOME-UsesNotifications=true
+Actions=Show;
+
+[Desktop Action Show]
+Name=Open Clipboard History
+Exec=clypse

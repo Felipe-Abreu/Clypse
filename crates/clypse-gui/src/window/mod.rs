@@ -420,6 +420,30 @@ fn build_row(item: &ClipItem, cmd_tx: &SyncSender<GuiCommand>) -> adw::ActionRow
     });
     row.add_suffix(&fav_btn);
 
+    // Botão de deletar
+    let del_btn = gtk4::Button::from_icon_name("user-trash-symbolic");
+    del_btn.add_css_class("flat");
+    del_btn.add_css_class("destructive-action");
+    del_btn.set_valign(gtk4::Align::Center);
+    del_btn.set_tooltip_text(Some("Delete item"));
+    del_btn.set_opacity(0.0);
+
+    let del_tx = cmd_tx.clone();
+    del_btn.connect_clicked(move |_| {
+        let _ = del_tx.try_send(GuiCommand::DeleteItem(item_id));
+    });
+    row.add_suffix(&del_btn);
+
+    // Mostra o botão de deletar ao passar o mouse
+    {
+        let d = del_btn.clone();
+        let hover = gtk4::EventControllerMotion::new();
+        hover.connect_enter(move |_, _, _| { d.set_opacity(1.0); });
+        let d2 = del_btn.clone();
+        hover.connect_leave(move |_| { d2.set_opacity(0.0); });
+        row.add_controller(hover);
+    }
+
     // Item_id armazenado no widget para recuperação na ativação
     unsafe { row.set_data("clip-item-id", item.id) };
 

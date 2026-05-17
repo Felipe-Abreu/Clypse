@@ -206,8 +206,25 @@ impl ClypseWindow {
                 warn!("Daemon error: {}", e);
                 self.status_label.set_text(&format!("Error: {}", e));
             }
-            DaemonMessage::ItemUpdated { .. } => {
-                // Favorite/pin toggle ou use_count: recarrega lista
+            DaemonMessage::FavoriteToggled { item_id, is_favorite } => {
+                if let Some(item) = self.items.borrow_mut().iter_mut().find(|i| i.id == item_id) {
+                    item.is_favorite = is_favorite;
+                }
+                let items = self.items.borrow().clone();
+                let total = items.len() as i64;
+                self.rebuild_list(&items);
+                self.update_status(total, &items);
+            }
+            DaemonMessage::PinnedToggled { item_id, is_pinned } => {
+                if let Some(item) = self.items.borrow_mut().iter_mut().find(|i| i.id == item_id) {
+                    item.is_pinned = is_pinned;
+                }
+                let items = self.items.borrow().clone();
+                let total = items.len() as i64;
+                self.rebuild_list(&items);
+                self.update_status(total, &items);
+            }
+            DaemonMessage::ItemUpdated => {
                 let search = current_search(&self.search_entry);
                 let _ = self.cmd_tx.try_send(GuiCommand::GetItems {
                     search,

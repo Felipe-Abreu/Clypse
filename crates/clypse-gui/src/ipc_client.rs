@@ -30,21 +30,22 @@ pub struct ClipItem {
 /// Mensagens do daemon para a GUI
 #[derive(Debug, Clone)]
 pub enum DaemonMessage {
-    Items       { items: Vec<ClipItem>, total: i64 },
-    ItemAdded   (ClipItem),
-    ItemUpdated { item_id: i64 },
-    ItemDeleted { item_id: i64 },
+    Items           { items: Vec<ClipItem>, total: i64 },
+    ItemAdded       (ClipItem),
+    FavoriteToggled { item_id: i64, is_favorite: bool },
+    PinnedToggled   { item_id: i64, is_pinned: bool },
+    ItemUpdated,
+    ItemDeleted     { item_id: i64 },
     HistoryCleared,
     Disconnected,
-    Error       (String),
+    Error           (String),
 }
 
 /// Comandos da GUI para o daemon via IPC
 #[derive(Debug, Clone)]
 pub enum GuiCommand {
-    GetItems    { search: Option<String>, limit: usize, offset: usize },
+    GetItems      { search: Option<String>, limit: usize, offset: usize },
     ToggleFavorite(i64),
-    TogglePinned  (i64),
     DeleteItem    (i64),
     ClearHistory,
 }
@@ -169,9 +170,6 @@ fn command_to_json(cmd: &GuiCommand, id: u64) -> String {
         GuiCommand::ToggleFavorite(item_id) => {
             format!("{{\"method\":\"toggle_favorite\",\"id\":{},\"item_id\":{}}}\n", id, item_id)
         }
-        GuiCommand::TogglePinned(item_id) => {
-            format!("{{\"method\":\"toggle_pinned\",\"id\":{},\"item_id\":{}}}\n", id, item_id)
-        }
         GuiCommand::DeleteItem(item_id) => {
             format!("{{\"method\":\"delete_item\",\"id\":{},\"item_id\":{}}}\n", id, item_id)
         }
@@ -198,8 +196,14 @@ fn parse_daemon_message(raw: &str) -> Option<DaemonMessage> {
                 }
                 "deleted"  => Some(DaemonMessage::ItemDeleted { item_id: data["item_id"].as_i64()? }),
                 "cleared"  => Some(DaemonMessage::HistoryCleared),
-                "favorite" => Some(DaemonMessage::ItemUpdated { item_id: data["item_id"].as_i64()? }),
-                "pinned"   => Some(DaemonMessage::ItemUpdated { item_id: data["item_id"].as_i64()? }),
+                "favorite" => Some(DaemonMessage::FavoriteToggled {
+                    item_id:     data["item_id"].as_i64()?,
+                    is_favorite: data["is_favorite"].as_bool()?,
+                }),
+                "pinned"   => Some(DaemonMessage::PinnedToggled {
+                    item_id:  data["item_id"].as_i64()?,
+                    is_pinned: data["is_pinned"].as_bool()?,
+                }),
                 _          => None,
             }
         }
@@ -210,7 +214,7 @@ fn parse_daemon_message(raw: &str) -> Option<DaemonMessage> {
                     let item: ClipItem = serde_json::from_value(ev["item"].clone()).ok()?;
                     Some(DaemonMessage::ItemAdded(item))
                 }
-                "item_updated"    => Some(DaemonMessage::ItemUpdated { item_id: ev["item_id"].as_i64()? }),
+                "item_updated"    => Some(DaemonMessage::ItemUpdated),
                 "item_deleted"    => Some(DaemonMessage::ItemDeleted { item_id: ev["item_id"].as_i64()? }),
                 "history_cleared" => Some(DaemonMessage::HistoryCleared),
                 _                 => None,

@@ -49,11 +49,11 @@ impl ClypseWindow {
         fav_filter_btn.add_css_class("flat");
         header.pack_start(&fav_filter_btn);
 
-        // Botão limpar histórico
-        let clear_btn = gtk4::Button::from_icon_name("edit-clear-all-symbolic");
+        // Botão limpar histórico — ao lado do filtro, longe dos botões de janela
+        let clear_btn = gtk4::Button::from_icon_name("edit-delete-symbolic");
         clear_btn.set_tooltip_text(Some("Clear history"));
         clear_btn.add_css_class("flat");
-        header.pack_end(&clear_btn);
+        header.pack_start(&clear_btn);
 
         // Menu de aplicação
         let menu_btn = gtk4::MenuButton::new();
@@ -117,7 +117,15 @@ impl ClypseWindow {
         menu.append(Some("Quit"),         Some("app.quit"));
         menu_btn.set_menu_model(Some(&menu));
 
-        // ESC fecha a janela
+        // ESC fecha a janela — dois caminhos:
+        // 1. SearchEntry com foco: emite stop-search antes de propagar para a janela
+        // 2. Qualquer outro widget com foco: capturado pelo EventControllerKey da janela
+        {
+            let w = window.clone();
+            search_entry.connect_stop_search(move |_| {
+                w.set_visible(false);
+            });
+        }
         {
             let w = window.clone();
             let ctrl = gtk4::EventControllerKey::new();

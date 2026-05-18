@@ -152,8 +152,7 @@ fn build_ui(app: &adw::Application) -> Result<()> {
         });
     }
 
-    clypse_win.window.present();
-    info!("Clypse GUI started");
+    info!("Clypse GUI started (background)");
     Ok(())
 }
 

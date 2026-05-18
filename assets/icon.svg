@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#4a9fd8"/>
+      <stop offset="100%" stop-color="#1c71d8"/>
+    </linearGradient>
+    <linearGradient id="board" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f0f4f8"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-5%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000030"/>
+    </filter>
+  </defs>
+
+  <!-- Fundo arredondado (padrão ícones GNOME) -->
+  <rect width="128" height="128" rx="22" fill="url(#bg)"/>
+
+  <!-- Sombra suave no corpo do clipboard -->
+  <rect x="30" y="27" width="68" height="80" rx="7" fill="#0000002a" filter="url(#shadow)"/>
+
+  <!-- Corpo do clipboard -->
+  <rect x="28" y="25" width="68" height="80" rx="7" fill="url(#board)"/>
+
+  <!-- Clipe superior (presilha) -->
+  <rect x="44" y="19" width="40" height="20" rx="6" fill="#1c71d8"/>
+  <!-- Furo da presilha -->
+  <rect x="52" y="23" width="24" height="12" rx="5" fill="url(#bg)" opacity="0.85"/>
+
+  <!-- Linhas de conteúdo simulando texto -->
+  <rect x="40" y="52" width="48" height="5.5" rx="2.75" fill="#3584e4" opacity="0.55"/>
+  <rect x="40" y="63" width="48" height="5.5" rx="2.75" fill="#3584e4" opacity="0.45"/>
+  <rect x="40" y="74" width="32" height="5.5" rx="2.75" fill="#3584e4" opacity="0.35"/>
+
+  <!-- Estrela indicando "favoritos" — detalhe sutil canto inferior direito -->
+  <text x="85" y="93" font-size="16" fill="#f5c211" font-family="sans-serif"
+        text-anchor="middle" dominant-baseline="middle" opacity="0.9">★</text>
+</svg>

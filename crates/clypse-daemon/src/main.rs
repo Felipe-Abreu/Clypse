@@ -63,14 +63,31 @@ async fn main() -> Result<()> {
     // ── Notifica systemd que estamos prontos ──────────────────────────────────
     notify_systemd_ready();
 
+    // ── Restaura o clipboard após restart ─────────────────────────────────────
+    // Como o Clypse detém o ownership do clipboard, o conteúdo morre junto com
+    // o processo. Repovoar com o item mais recente evita perder o que o usuário
+    // tinha copiado antes de um restart/crash.
+    if session == SessionType::Wayland {
+        restore_clipboard_from_history(&db);
+    }
+
     info!("Clypse daemon ready. Monitoring clipboard...");
 
     // ── Loop principal: processa eventos do clipboard ─────────────────────────
     let mut watchdog = tokio::time::interval(std::time::Duration::from_secs(10));
 
-    loop {
+    let run_result = loop {
         tokio::select! {
-            Some(event) = clip_rx.recv() => {
+            maybe_event = clip_rx.recv() => {
+                let Some(event) = maybe_event else {
+                    // O monitor esgotou as tentativas de reconexão e morreu.
+                    // Encerrar com erro faz o systemd nos reiniciar — continuar
+                    // rodando seria virar um zumbi que alimenta o watchdog sem
+                    // capturar nada.
+                    error!("Clipboard monitor terminated; exiting so systemd can restart us");
+                    break Err(anyhow::anyhow!("clipboard monitor terminated unexpectedly"));
+                };
+
                 let db = db.clone();
                 let event_tx = event_tx.clone();
                 let max_items = config.max_history_items;
@@ -88,10 +105,10 @@ async fn main() -> Result<()> {
             // Sinais de shutdown
             _ = shutdown_signal() => {
                 info!("Shutdown signal received");
-                break;
+                break Ok(());
             }
         }
-    }
+    };
 
     // Cleanup
     if socket_path.exists() {
@@ -99,7 +116,44 @@ async fn main() -> Result<()> {
     }
 
     info!("Clypse daemon stopped");
-    Ok(())
+    run_result
+}
+
+/// Repovoa o clipboard com o item mais recente do histórico, se o clipboard
+/// estiver vazio. Não sobrescreve conteúdo que algum app ainda detenha.
+fn restore_clipboard_from_history(db: &Database) {
+    use wl_clipboard_rs::paste::{get_mime_types, ClipboardType, Seat};
+
+    // Clipboard não-vazio → algum app sobreviveu ao nosso restart, não mexe
+    if let Ok(types) = get_mime_types(ClipboardType::Regular, Seat::Unspecified) {
+        if !types.is_empty() {
+            return;
+        }
+    }
+
+    let item = match db.latest_item() {
+        Ok(Some(item)) => item,
+        _ => return,
+    };
+
+    let (data, mime) = if let Some(text) = item.content {
+        // MIMEs refinados (text/uri, text/json) são rótulos internos, não
+        // tipos padrão — restaura sempre como texto puro
+        (text.into_bytes(), "text/plain;charset=utf-8".to_string())
+    } else if let Some(path) = item.blob_path {
+        match std::fs::read(&path) {
+            Ok(bytes) => (bytes, item.mime_type),
+            Err(e) => {
+                warn!("Cannot read blob {} to restore clipboard: {}", path, e);
+                return;
+            }
+        }
+    } else {
+        return;
+    };
+
+    info!(mime = %mime, bytes = data.len(), "Restoring last clipboard item after restart");
+    clipboard::wayland::take_ownership(data, &mime);
 }
 
 // ─── Processamento de evento ──────────────────────────────────────────────────

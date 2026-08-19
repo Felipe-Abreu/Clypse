@@ -251,6 +251,23 @@ impl Database {
         .map_err(Into::into)
     }
 
+    /// Item usado mais recentemente — para restaurar o clipboard após restart.
+    pub fn latest_item(&self) -> Result<Option<ClipItem>> {
+        let conn = self.0.lock().unwrap();
+        conn.query_row(
+            "SELECT id, hash, content, blob_path, mime_type,
+                    byte_size, is_favorite, is_pinned,
+                    created_at, last_used, use_count
+             FROM clipboard_items
+             ORDER BY last_used DESC
+             LIMIT 1",
+            [],
+            row_to_item,
+        )
+        .optional()
+        .map_err(Into::into)
+    }
+
     pub fn get_setting(&self, key: &str, default: &str) -> Result<String> {
         let conn = self.0.lock().unwrap();
         conn.query_row(

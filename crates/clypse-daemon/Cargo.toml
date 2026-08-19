@@ -28,6 +28,8 @@ wayland-client          = "0.31"
 wayland-protocols-wlr   = { version = "0.2", features = ["client"] }
 # Unix pipes para receber conteúdo do clipboard via FD
 os_pipe = "1"
+# poll/fcntl para leitura do pipe com timeout (não travar o monitor)
+libc = "0.2"
 
 # Clipboard — X11 fallback
 [target.'cfg(unix)'.dependencies]

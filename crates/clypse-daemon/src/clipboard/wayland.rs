@@ -18,14 +18,20 @@
 ///   6. Lemos o conteúdo via pipe (offer.receive(mime, write_fd))
 ///   7. Emitimos ClipboardEvent para o loop principal
 ///   8. Chamamos wl-clipboard-rs::copy para tomar ownership e garantir persistência
+///
+/// Resiliência: erros pontuais (pipe quebrado de um app que fechou, offer
+/// inválida) não derrubam o monitor; erros de conexão disparam reconexão com
+/// backoff exponencial. Só desistimos após falhas consecutivas repetidas —
+/// aí o canal fecha e o main encerra o processo para o systemd reiniciar.
 use super::ClipboardEvent;
 use anyhow::{anyhow, Result};
 use os_pipe::PipeReader;
 use sha2::{Digest, Sha256};
 use std::io::Read;
 use std::os::fd::AsFd;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 use wayland_client::{
     event_created_child,
     globals::{registry_queue_init, GlobalListContents},
@@ -51,6 +57,8 @@ struct WaylandState {
     event_tx: UnboundedSender<ClipboardEvent>,
     /// Sinaliza que um evento de selection foi recebido — para processar após dispatch
     selection_ready: Option<(ZwlrDataControlOfferV1, Vec<String>)>,
+    /// Device foi invalidado pelo compositor (seat removido) — força reconexão
+    finished: bool,
 }
 
 impl WaylandState {
@@ -61,6 +69,7 @@ impl WaylandState {
             last_hash:       String::new(),
             event_tx,
             selection_ready: None,
+            finished:        false,
         }
     }
 
@@ -160,6 +169,11 @@ impl Dispatch<ZwlrDataControlDeviceV1, ()> for WaylandState {
 
             // Clipboard primário mudou para esta offer
             zwlr_data_control_device_v1::Event::Selection { id } => {
+                // Selection anterior ainda não processada seria vazada —
+                // duas selections podem chegar num mesmo dispatch
+                if let Some((old, _)) = state.selection_ready.take() {
+                    old.destroy();
+                }
                 if let Some(offer) = id {
                     // Sinaliza para processar após o dispatch completar
                     // (não fazemos I/O bloqueante dentro do handler)
@@ -172,6 +186,7 @@ impl Dispatch<ZwlrDataControlDeviceV1, ()> for WaylandState {
             // Device foi invalidado (ex: seat removido)
             zwlr_data_control_device_v1::Event::Finished => {
                 error!("Wayland data control device finished");
+                state.finished = true;
             }
 
             // Ignoramos primary selection (meio-botão do mouse)
@@ -201,7 +216,49 @@ impl Dispatch<ZwlrDataControlOfferV1, ()> for WaylandState {
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
+/// Quantas falhas rápidas consecutivas toleramos antes de desistir.
+/// Ao desistir, o canal fecha e o main encerra o processo — o systemd reinicia.
+const MAX_CONSECUTIVE_FAILURES: u32 = 10;
+
 pub fn run(event_tx: UnboundedSender<ClipboardEvent>, _debounce_ms: u64) -> Result<()> {
+    let mut backoff_secs = 1u64;
+    let mut consecutive_failures = 0u32;
+
+    loop {
+        let started = Instant::now();
+        let result = run_once(&event_tx);
+
+        match result {
+            Ok(()) => return Ok(()), // encerramento limpo (daemon desligando)
+            Err(e) => {
+                if event_tx.is_closed() {
+                    return Ok(());
+                }
+                // Sessão que rodou por um tempo razoável zera o backoff:
+                // é uma falha nova, não a mesma repetindo
+                if started.elapsed() > Duration::from_secs(60) {
+                    backoff_secs = 1;
+                    consecutive_failures = 0;
+                }
+                consecutive_failures += 1;
+                if consecutive_failures >= MAX_CONSECUTIVE_FAILURES {
+                    return Err(anyhow!(
+                        "Wayland monitor failed {} times in a row, giving up: {:#}",
+                        consecutive_failures, e
+                    ));
+                }
+                error!(
+                    "Wayland clipboard monitor error ({:#}); reconnecting in {}s",
+                    e, backoff_secs
+                );
+                std::thread::sleep(Duration::from_secs(backoff_secs));
+                backoff_secs = (backoff_secs * 2).min(30);
+            }
+        }
+    }
+}
+
+fn run_once(event_tx: &UnboundedSender<ClipboardEvent>) -> Result<()> {
     let conn = Connection::connect_to_env()
         .map_err(|e| anyhow!("Cannot connect to Wayland: {}. Is WAYLAND_DISPLAY set?", e))?;
 
@@ -209,7 +266,7 @@ pub fn run(event_tx: UnboundedSender<ClipboardEvent>, _debounce_ms: u64) -> Resu
         .map_err(|e| anyhow!("Failed to init Wayland globals: {}", e))?;
 
     let qh = event_queue.handle();
-    let mut state = WaylandState::new(event_tx);
+    let mut state = WaylandState::new(event_tx.clone());
 
     // Obtém globals necessários
     let manager: ZwlrDataControlManagerV1 = globals
@@ -231,20 +288,32 @@ pub fn run(event_tx: UnboundedSender<ClipboardEvent>, _debounce_ms: u64) -> Resu
     debug!("Wayland clipboard monitor ready");
 
     // ── Loop principal de eventos ─────────────────────────────────────────────
+    // O check de selection_ready vem ANTES do dispatch: o roundtrip inicial já
+    // pode ter entregue a selection do conteúdo atual do clipboard, e ela seria
+    // ignorada até o próximo evento do compositor.
     loop {
-        // Bloqueia até receber pelo menos um evento do compositor
-        event_queue.blocking_dispatch(&mut state)
-            .map_err(|e| anyhow!("Wayland dispatch error: {}", e))?;
-
-        // Verifica se há uma selection pronta para processar
+        // Verifica se há uma selection pronta para processar.
+        // Erro pontual (app fechou no meio da transferência, timeout) não
+        // pode derrubar o monitor — só logamos e seguimos.
         if let Some((offer, mimes)) = state.selection_ready.take() {
-            process_offer(offer, mimes, &mut state, &conn)?;
+            if let Err(e) = process_offer(offer, mimes, &mut state, &conn) {
+                warn!("Failed to process clipboard offer: {:#}", e);
+            }
+        }
+
+        // Compositor invalidou o device — reconecta do zero
+        if state.finished {
+            return Err(anyhow!("data control device finished (seat removed?)"));
         }
 
         // Verifica se o receiver foi dropado (daemon encerrando)
         if state.event_tx.is_closed() {
             break;
         }
+
+        // Bloqueia até receber pelo menos um evento do compositor
+        event_queue.blocking_dispatch(&mut state)
+            .map_err(|e| anyhow!("Wayland dispatch error: {}", e))?;
     }
 
     Ok(())
@@ -258,6 +327,14 @@ fn process_offer(
     state: &mut WaylandState,
     conn: &Connection,
 ) -> Result<()> {
+    // Cópia anunciada por nós mesmos (take_ownership) — não há nada novo a
+    // capturar, e pular a releitura evita transferir imagens de MBs à toa
+    if mimes.iter().any(|m| m == CLYPSE_MARKER_MIME) {
+        debug!("Ignoring our own clipboard ownership announcement");
+        offer.destroy();
+        return Ok(());
+    }
+
     let mime = match WaylandState::select_mime(&mimes) {
         Some(m) => m.to_string(),
         None => {
@@ -317,10 +394,73 @@ fn process_offer(
     Ok(())
 }
 
+/// Tempo máximo esperando o dono do clipboard escrever no pipe.
+/// Sem isso, um app travado congela o monitor para sempre.
+const READ_TIMEOUT: Duration = Duration::from_secs(15);
+/// Limite duro de tamanho — protege contra fontes que despejam dados sem fim.
+const MAX_CLIPBOARD_BYTES: usize = 64 * 1024 * 1024;
+
 fn read_pipe(mut reader: PipeReader) -> Result<Vec<u8>> {
+    use std::os::fd::AsRawFd;
+
+    let fd = reader.as_raw_fd();
+
+    // Modo não-bloqueante + poll com deadline: a leitura nunca trava o monitor
+    // SAFETY: fcntl em fd válido que possuímos
+    unsafe {
+        let flags = libc::fcntl(fd, libc::F_GETFL);
+        if flags < 0 || libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) < 0 {
+            return Err(anyhow!(
+                "fcntl(O_NONBLOCK) failed: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+    }
+
+    let deadline = Instant::now() + READ_TIMEOUT;
     let mut buf = Vec::with_capacity(4096);
-    reader.read_to_end(&mut buf)
-        .map_err(|e| anyhow!("Failed to read clipboard pipe: {}", e))?;
+    let mut chunk = [0u8; 64 * 1024];
+
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(anyhow!(
+                "timed out after {:?} waiting for clipboard owner to write",
+                READ_TIMEOUT
+            ));
+        }
+
+        let mut pfd = libc::pollfd { fd, events: libc::POLLIN, revents: 0 };
+        // SAFETY: pollfd válido apontando para fd que possuímos
+        let n = unsafe { libc::poll(&mut pfd, 1, remaining.as_millis() as libc::c_int) };
+        if n < 0 {
+            let err = std::io::Error::last_os_error();
+            if err.kind() == std::io::ErrorKind::Interrupted {
+                continue;
+            }
+            return Err(anyhow!("poll on clipboard pipe failed: {}", err));
+        }
+        if n == 0 {
+            continue; // poll expirou — o check do deadline acima encerra
+        }
+
+        match reader.read(&mut chunk) {
+            Ok(0) => break, // EOF — dono fechou o pipe
+            Ok(n) => {
+                buf.extend_from_slice(&chunk[..n]);
+                if buf.len() > MAX_CLIPBOARD_BYTES {
+                    return Err(anyhow!(
+                        "clipboard content exceeds {} bytes, aborting read",
+                        MAX_CLIPBOARD_BYTES
+                    ));
+                }
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => continue,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(anyhow!("Failed to read clipboard pipe: {}", e)),
+        }
+    }
+
     Ok(buf)
 }
 
@@ -332,24 +472,35 @@ fn hash_bytes(data: &[u8]) -> String {
 
 // ─── Ownership (persistência do clipboard) ────────────────────────────────────
 
+/// MIME marcador anunciado junto com nossas cópias — permite ao monitor
+/// reconhecer (e ignorar) anúncios de ownership do próprio Clypse.
+pub const CLYPSE_MARKER_MIME: &str = "application/x-clypse";
+
 /// Toma ownership do clipboard via wl-clipboard-rs.
 /// Garante que o conteúdo persiste quando o app original fecha.
 /// Roda em thread separada para não bloquear o daemon.
 pub fn take_ownership(data: Vec<u8>, mime_type: &str) {
-    use wl_clipboard_rs::copy::{MimeType as CopyMime, Options, Source};
+    use wl_clipboard_rs::copy::{copy_multi, MimeSource, MimeType as CopyMime, Options, Source};
 
-    let mime = match mime_type {
-        m if m.starts_with("text/")  => CopyMime::Specific(m.to_string()),
-        m if m.starts_with("image/") => CopyMime::Specific(m.to_string()),
-        _ => return,
-    };
+    if !(mime_type.starts_with("text/") || mime_type.starts_with("image/")) {
+        return;
+    }
 
-    let boxed: Box<[u8]> = data.into_boxed_slice();
+    let sources = vec![
+        MimeSource {
+            source:    Source::Bytes(data.into_boxed_slice()),
+            mime_type: CopyMime::Specific(mime_type.to_string()),
+        },
+        MimeSource {
+            source:    Source::Bytes(vec![b'1'].into_boxed_slice()),
+            mime_type: CopyMime::Specific(CLYPSE_MARKER_MIME.to_string()),
+        },
+    ];
 
     std::thread::Builder::new()
         .name("wl-clip-owner".into())
         .spawn(move || {
-            if let Err(e) = Options::new().copy(Source::Bytes(boxed), mime) {
+            if let Err(e) = copy_multi(Options::new(), sources) {
                 debug!("Clipboard ownership ended: {}", e);
             }
         })

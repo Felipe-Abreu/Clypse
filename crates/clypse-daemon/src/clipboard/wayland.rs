@@ -335,6 +335,15 @@ fn process_offer(
         return Ok(());
     }
 
+    // Gerenciadores de senha (KeePassXC, Bitwarden, Klipper) anexam este MIME
+    // para pedir que o conteúdo não seja registrado no histórico. Também não
+    // tomamos ownership: o segredo deve expirar quando o gerenciador limpar.
+    if mimes.iter().any(|m| m == PASSWORD_MANAGER_HINT_MIME) {
+        debug!("Password manager hint present; not recording clipboard item");
+        offer.destroy();
+        return Ok(());
+    }
+
     let mime = match WaylandState::select_mime(&mimes) {
         Some(m) => m.to_string(),
         None => {
@@ -475,6 +484,10 @@ fn hash_bytes(data: &[u8]) -> String {
 /// MIME marcador anunciado junto com nossas cópias — permite ao monitor
 /// reconhecer (e ignorar) anúncios de ownership do próprio Clypse.
 pub const CLYPSE_MARKER_MIME: &str = "application/x-clypse";
+
+/// Convenção do KDE adotada pelos gerenciadores de senha: a presença deste
+/// MIME numa offer sinaliza conteúdo sensível que não deve ir ao histórico.
+const PASSWORD_MANAGER_HINT_MIME: &str = "x-kde-passwordManagerHint";
 
 /// Toma ownership do clipboard via wl-clipboard-rs.
 /// Garante que o conteúdo persiste quando o app original fecha.

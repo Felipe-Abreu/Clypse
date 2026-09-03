@@ -1,14 +1,14 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: clypse
-Upstream-Contact: Felipe Abreu <gabrielepim0@gmail.com>
-Source: https://github.com/clypse/clypse
+Upstream-Contact: Felipe Abreu <fabreum.dev@gmail.com>
+Source: https://github.com/Felipe-Abreu/Clypse
 
 Files: *
-Copyright: 2024-2026 Felipe Abreu <gabrielepim0@gmail.com>
+Copyright: 2024-2026 Felipe Abreu <fabreum.dev@gmail.com>
 License: GPL-3.0+
 
 Files: data/*
-Copyright: 2024-2026 Felipe Abreu <gabrielepim0@gmail.com>
+Copyright: 2024-2026 Felipe Abreu <fabreum.dev@gmail.com>
 License: GPL-3.0+
 
 License: GPL-3.0+

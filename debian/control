@@ -1,8 +1,8 @@
 Source: clypse
 Section: utils
 Priority: optional
-Maintainer: Felipe Abreu <gabrielepim0@gmail.com>
-Build-Depends: debhelper-compat (= 13), cargo, rustc, libgtk-4-dev, libadwaita-1-dev, libsqlite3-dev, pkg-config
+Maintainer: Felipe Abreu <fabreum.dev@gmail.com>
+Build-Depends: debhelper-compat (= 13), cargo, rustc, libgtk-4-dev, libadwaita-1-dev, libsqlite3-dev, libxkbcommon-dev, pkg-config
 Standards-Version: 4.6.2
 Homepage: https://github.com/Felipe-Abreu/Clypse
 Rules-Requires-Root: no

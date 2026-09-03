@@ -1,6 +1,8 @@
 # Rust build artifacts
 /target/
-Cargo.lock
+/docs
+# Cargo.lock É versionado: o Flatpak (cargo-sources.json) e builds
+# reproduzíveis dependem dele.
 
 # IDE
 .idea/
@@ -13,6 +15,8 @@ Cargo.lock
 # Flatpak
 repo/
 *.flatpak
+.flatpak-builder/
+builddir/
 
 # Debian build artifacts
 debian/.debhelper/

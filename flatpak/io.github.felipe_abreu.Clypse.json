@@ -1,0 +1,50 @@
+{
+  "app-id": "io.github.felipe_abreu.Clypse",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "49",
+  "sdk": "org.gnome.Sdk",
+  "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
+  "command": "clypse",
+  "finish-args": [
+    "--socket=wayland",
+    "--device=dri",
+    "--talk-name=org.kde.StatusNotifierWatcher"
+  ],
+  "build-options": {
+    "append-path": "/usr/lib/sdk/rust-stable/bin",
+    "env": {
+      "CARGO_HOME": "/run/build/clypse/cargo"
+    }
+  },
+  "cleanup": [],
+  "modules": [
+    {
+      "name": "clypse",
+      "buildsystem": "simple",
+      "build-commands": [
+        "cargo --offline fetch --manifest-path Cargo.toml --verbose",
+        "cargo --offline build --release --verbose",
+        "install -Dm755 target/release/clypse-daemon /app/bin/clypse-daemon",
+        "install -Dm755 target/release/clypse /app/bin/clypse",
+        "install -Dm755 target/release/clypse-applet /app/bin/clypse-applet",
+        "install -Dm644 data/io.github.felipe_abreu.Clypse.desktop -t /app/share/applications",
+        "install -Dm644 data/io.github.felipe_abreu.Clypse.Applet.desktop -t /app/share/applications",
+        "install -Dm644 data/io.github.felipe_abreu.Clypse.metainfo.xml -t /app/share/metainfo",
+        "install -Dm644 data/io.github.felipe_abreu.Clypse.svg -t /app/share/icons/hicolor/scalable/apps"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://github.com/Felipe-Abreu/Clypse.git",
+          "tag": "v0.2.0",
+          "commit": "SUBSTITUA-PELO-HASH-COMPLETO-DA-TAG",
+          "x-checker-data": {
+            "type": "git",
+            "tag-pattern": "^v([\\d.]+)$"
+          }
+        },
+        "cargo-sources.json"
+      ]
+    }
+  ]
+}

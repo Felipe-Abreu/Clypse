@@ -1,6 +1,6 @@
 [Unit]
 Description=Clypse Clipboard Daemon
-Documentation=https://github.com/clypse/clypse
+Documentation=https://github.com/Felipe-Abreu/Clypse
 # Inicia APÓS a sessão gráfica estar estabelecida.
 # Garante que WAYLAND_DISPLAY e XDG_RUNTIME_DIR estejam disponíveis.
 After=graphical-session.target

@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use tracing::{error, info, warn};
 use window::ClypseWindow;
 
-const APP_ID: &str = "io.github.clypse.Clypse";
+const APP_ID: &str = "io.github.felipe_abreu.Clypse";
 
 fn main() -> Result<()> {
     tracing_subscriber::fmt()
@@ -185,6 +185,18 @@ fn daemon_socket_path() -> PathBuf {
 }
 
 fn start_daemon() -> Result<()> {
+    // Dentro do Flatpak não há systemd — spawn direto no sandbox
+    if std::env::var_os("FLATPAK_ID").is_some() {
+        let daemon_bin = which::which("clypse-daemon")
+            .map_err(|_| anyhow::anyhow!("clypse-daemon not found in sandbox"))?;
+        std::process::Command::new(&daemon_bin)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()?;
+        info!("Daemon started inside Flatpak sandbox");
+        return Ok(());
+    }
+
     // Tenta via systemd primeiro
     if std::process::Command::new("systemctl")
         .args(["--user", "start", "clypse-daemon.service"])

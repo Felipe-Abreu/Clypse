@@ -3,10 +3,11 @@ resolver = "2"
 members = [
     "crates/clypse-daemon",
     "crates/clypse-gui",
+    "crates/clypse-applet",
 ]
 
 [workspace.package]
-version      = "0.1.0"
+version      = "0.2.0"
 edition      = "2021"
 authors      = ["Felipe Abreu <fabreum.dev@gmail.com>"]
 license      = "GPL-3.0"

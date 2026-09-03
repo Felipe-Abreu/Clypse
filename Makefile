@@ -27,6 +27,9 @@ daemon-bin:
 gui-bin:
 	$(CARGO) build $(RELEASE) -p clypse-gui
 
+applet-bin:
+	$(CARGO) build $(RELEASE) -p clypse-applet
+
 # ─── Qualidade ────────────────────────────────────────────────────────────────
 
 check:
@@ -49,10 +52,13 @@ dev-install: build
 	@mkdir -p $(HOME)/.local/share/icons/hicolor/scalable/apps
 	install -m755 $(TARGET_DIR)/clypse-daemon $(HOME)/.local/bin/clypse-daemon
 	install -m755 $(TARGET_DIR)/clypse        $(HOME)/.local/bin/clypse
-	install -m644 data/io.github.clypse.Clypse.svg \
-	    $(HOME)/.local/share/icons/hicolor/scalable/apps/io.github.clypse.Clypse.svg
-	install -m644 data/io.github.clypse.Clypse.desktop \
-	    $(HOME)/.local/share/applications/io.github.clypse.Clypse.desktop
+	install -m755 $(TARGET_DIR)/clypse-applet $(HOME)/.local/bin/clypse-applet
+	install -m644 data/io.github.felipe_abreu.Clypse.svg \
+	    $(HOME)/.local/share/icons/hicolor/scalable/apps/io.github.felipe_abreu.Clypse.svg
+	install -m644 data/io.github.felipe_abreu.Clypse.desktop \
+	    $(HOME)/.local/share/applications/io.github.felipe_abreu.Clypse.desktop
+	install -m644 data/io.github.felipe_abreu.Clypse.Applet.desktop \
+	    $(HOME)/.local/share/applications/io.github.felipe_abreu.Clypse.Applet.desktop
 	-gtk-update-icon-cache -f -t $(HOME)/.local/share/icons/hicolor 2>/dev/null
 	-update-desktop-database $(HOME)/.local/share/applications 2>/dev/null
 	$(MAKE) service
@@ -65,9 +71,11 @@ dev-uninstall:
 	$(MAKE) disable
 	rm -f $(HOME)/.local/bin/clypse-daemon
 	rm -f $(HOME)/.local/bin/clypse
+	rm -f $(HOME)/.local/bin/clypse-applet
+	rm -f $(HOME)/.local/share/applications/io.github.felipe_abreu.Clypse.Applet.desktop
 	rm -f $(SYSTEMD_USER_DIR)/clypse-daemon.service
-	rm -f $(HOME)/.local/share/icons/hicolor/scalable/apps/io.github.clypse.Clypse.svg
-	rm -f $(HOME)/.local/share/applications/io.github.clypse.Clypse.desktop
+	rm -f $(HOME)/.local/share/icons/hicolor/scalable/apps/io.github.felipe_abreu.Clypse.svg
+	rm -f $(HOME)/.local/share/applications/io.github.felipe_abreu.Clypse.desktop
 	-gtk-update-icon-cache -f -t $(HOME)/.local/share/icons/hicolor 2>/dev/null
 	@echo "✓ Clypse removed."
 
@@ -76,12 +84,15 @@ dev-uninstall:
 install: build
 	install -Dm755 $(TARGET_DIR)/clypse-daemon  $(DESTDIR)$(BINDIR)/clypse-daemon
 	install -Dm755 $(TARGET_DIR)/clypse          $(DESTDIR)$(BINDIR)/clypse
-	install -Dm644 data/io.github.clypse.Clypse.desktop \
-	    $(DESTDIR)$(DATADIR)/applications/io.github.clypse.Clypse.desktop
-	install -Dm644 data/io.github.clypse.Clypse.metainfo.xml \
-	    $(DESTDIR)$(DATADIR)/metainfo/io.github.clypse.Clypse.metainfo.xml
-	install -Dm644 data/io.github.clypse.Clypse.svg \
-	    $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/io.github.clypse.Clypse.svg
+	install -Dm755 $(TARGET_DIR)/clypse-applet   $(DESTDIR)$(BINDIR)/clypse-applet
+	install -Dm644 data/io.github.felipe_abreu.Clypse.desktop \
+	    $(DESTDIR)$(DATADIR)/applications/io.github.felipe_abreu.Clypse.desktop
+	install -Dm644 data/io.github.felipe_abreu.Clypse.Applet.desktop \
+	    $(DESTDIR)$(DATADIR)/applications/io.github.felipe_abreu.Clypse.Applet.desktop
+	install -Dm644 data/io.github.felipe_abreu.Clypse.metainfo.xml \
+	    $(DESTDIR)$(DATADIR)/metainfo/io.github.felipe_abreu.Clypse.metainfo.xml
+	install -Dm644 data/io.github.felipe_abreu.Clypse.svg \
+	    $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/io.github.felipe_abreu.Clypse.svg
 	install -Dm644 data/systemd/clypse-daemon.service \
 	    $(DESTDIR)$(DATADIR)/systemd/user/clypse-daemon.service
 	@echo "✓ Clypse installed. Run 'make service enable' to activate daemon."
@@ -89,9 +100,11 @@ install: build
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/clypse-daemon
 	rm -f $(DESTDIR)$(BINDIR)/clypse
-	rm -f $(DESTDIR)$(DATADIR)/applications/io.github.clypse.Clypse.desktop
-	rm -f $(DESTDIR)$(DATADIR)/metainfo/io.github.clypse.Clypse.metainfo.xml
-	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/io.github.clypse.Clypse.svg
+	rm -f $(DESTDIR)$(BINDIR)/clypse-applet
+	rm -f $(DESTDIR)$(DATADIR)/applications/io.github.felipe_abreu.Clypse.desktop
+	rm -f $(DESTDIR)$(DATADIR)/applications/io.github.felipe_abreu.Clypse.Applet.desktop
+	rm -f $(DESTDIR)$(DATADIR)/metainfo/io.github.felipe_abreu.Clypse.metainfo.xml
+	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/io.github.felipe_abreu.Clypse.svg
 	rm -f $(DESTDIR)$(DATADIR)/systemd/user/clypse-daemon.service
 
 # ─── Serviço systemd do usuário ───────────────────────────────────────────────
@@ -123,6 +136,10 @@ restart:
 
 deb: build
 	dpkg-buildpackage -us -uc -b -d
+
+# Regenera as fontes offline do cargo para o Flatpak (requer python3 + aiohttp + toml)
+flatpak-sources:
+	python3 flatpak/flatpak-cargo-generator.py Cargo.lock -o flatpak/cargo-sources.json
 
 # ─── Limpeza ─────────────────────────────────────────────────────────────────
 

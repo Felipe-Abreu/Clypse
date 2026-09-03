@@ -33,6 +33,7 @@ Designed for GNOME and COSMIC desktops, compatible with any Wayland compositor t
 - **Hash-based deduplication** — no duplicate entries
 - **Auto-paste** — click an item to copy it; Clypse attempts to paste automatically via `wtype`, `ydotool`, or `xdotool`
 - **System tray icon** — SNI tray with quick Show/Quit access (GNOME, COSMIC, KDE)
+- **COSMIC panel applet** — native libcosmic applet with quick history popup and search
 - **Preferences dialog** — configure history limit, image capture, auto-clear, and more
 - **systemd user service** — starts on login, sd_notify watchdog integration
 - **Native GTK4/libadwaita UI** — follows GNOME/COSMIC HIG
@@ -121,6 +122,7 @@ Settings are saved automatically and stored at `~/.config/clypse/config.toml`.
 ```
 clypse-daemon   Wayland listener + SQLite + IPC server (Unix socket)
 clypse          GTK4/libadwaita GUI + IPC client
+clypse-applet   COSMIC panel applet (libcosmic) + IPC client
 ```
 
 The daemon runs as a systemd user service and communicates with the GUI over a Unix socket using a newline-delimited JSON protocol. The GUI connects on launch and reconnects automatically on disconnect.

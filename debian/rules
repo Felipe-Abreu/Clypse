@@ -8,7 +8,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 	dh $@
 
 override_dh_auto_build:
-	@if [ ! -f target/release/clypse ] || [ ! -f target/release/clypse-daemon ]; then \
+	@if [ ! -f target/release/clypse ] || [ ! -f target/release/clypse-daemon ] || [ ! -f target/release/clypse-applet ]; then \
 		cargo build --release; \
 	fi
 
@@ -17,12 +17,16 @@ override_dh_auto_install:
 		debian/clypse/usr/bin/clypse-daemon
 	install -Dm755 target/release/clypse \
 		debian/clypse/usr/bin/clypse
-	install -Dm644 data/io.github.clypse.Clypse.desktop \
-		debian/clypse/usr/share/applications/io.github.clypse.Clypse.desktop
-	install -Dm644 data/io.github.clypse.Clypse.metainfo.xml \
-		debian/clypse/usr/share/metainfo/io.github.clypse.Clypse.metainfo.xml
-	install -Dm644 data/io.github.clypse.Clypse.svg \
-		debian/clypse/usr/share/icons/hicolor/scalable/apps/io.github.clypse.Clypse.svg
+	install -Dm755 target/release/clypse-applet \
+		debian/clypse/usr/bin/clypse-applet
+	install -Dm644 data/io.github.felipe_abreu.Clypse.desktop \
+		debian/clypse/usr/share/applications/io.github.felipe_abreu.Clypse.desktop
+	install -Dm644 data/io.github.felipe_abreu.Clypse.Applet.desktop \
+		debian/clypse/usr/share/applications/io.github.felipe_abreu.Clypse.Applet.desktop
+	install -Dm644 data/io.github.felipe_abreu.Clypse.metainfo.xml \
+		debian/clypse/usr/share/metainfo/io.github.felipe_abreu.Clypse.metainfo.xml
+	install -Dm644 data/io.github.felipe_abreu.Clypse.svg \
+		debian/clypse/usr/share/icons/hicolor/scalable/apps/io.github.felipe_abreu.Clypse.svg
 	install -Dm644 data/systemd/clypse-daemon.system.service \
 		debian/clypse/usr/lib/systemd/user/clypse-daemon.service
 

@@ -12,11 +12,11 @@ struct ClipseTray {
 
 impl Tray for ClipseTray {
     fn id(&self) -> String {
-        "io.github.clypse.Clypse".into()
+        "io.github.felipe_abreu.Clypse".into()
     }
 
     fn icon_name(&self) -> String {
-        "io.github.clypse.Clypse".into()
+        "io.github.felipe_abreu.Clypse".into()
     }
 
     fn title(&self) -> String {

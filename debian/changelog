@@ -1,3 +1,13 @@
+clypse (0.2.0-1) unstable; urgency=medium
+
+  * New COSMIC panel applet (clypse-applet) built with libcosmic
+  * App ID renamed to io.github.felipe_abreu.Clypse (Flathub-verifiable)
+  * Metainfo: fixed URLs, added screenshots and vcs-browser
+  * Daemon auto-start without systemd (Flatpak-friendly)
+  * Flatpak manifest and packaging files added
+
+ -- Felipe Abreu <fabreum.dev@gmail.com>  Wed, 02 Sep 2026 23:00:00 -0300
+
 clypse (0.1.0-1) unstable; urgency=medium
 
   * Complete rewrite in Rust (from Python/PyQt6 prototype)
@@ -8,4 +18,4 @@ clypse (0.1.0-1) unstable; urgency=medium
   * Favorites system with persistent protection from auto-eviction
   * Renamed project from Nebulip to Clypse
 
- -- Felipe Abreu <gabrielepim0@gmail.com>  Sat, 16 May 2026 00:00:00 +0000
+ -- Felipe Abreu <fabreum.dev@gmail.com>  Sat, 16 May 2026 00:00:00 +0000

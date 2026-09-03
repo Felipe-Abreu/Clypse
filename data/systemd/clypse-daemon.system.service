@@ -1,6 +1,6 @@
 [Unit]
 Description=Clypse Clipboard Daemon
-Documentation=https://github.com/clypse/clypse
+Documentation=https://github.com/Felipe-Abreu/Clypse
 After=graphical-session.target
 PartOf=graphical-session.target
 Wants=graphical-session.target

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.felipe_abreu.Clypse</id>
+  <name>Clypse</name>
+  <summary>Modern clipboard manager for Linux</summary>
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer id="io.github.felipe_abreu">
+    <name>Felipe Abreu</name>
+  </developer>
+  <description>
+    <p>
+      Clypse is a fast, native clipboard manager for Linux desktops.
+      Built with Rust and GTK4/libadwaita, it integrates natively with
+      COSMIC OS, GNOME, and any Wayland compositor — including a COSMIC
+      panel applet for quick access to your clipboard history.
+    </p>
+    <ul>
+      <li>Persistent clipboard history across reboots</li>
+      <li>Instant full-text search via FTS5</li>
+      <li>Favorites and pinned items</li>
+      <li>Image support with thumbnails</li>
+      <li>Event-driven Wayland clipboard monitoring (no polling)</li>
+      <li>Clipboard persistence: content survives app closure</li>
+      <li>COSMIC panel applet with quick history popup</li>
+      <li>Follows system dark/light theme automatically</li>
+    </ul>
+  </description>
+  <url type="homepage">https://github.com/Felipe-Abreu/Clypse</url>
+  <url type="bugtracker">https://github.com/Felipe-Abreu/Clypse/issues</url>
+  <url type="vcs-browser">https://github.com/Felipe-Abreu/Clypse</url>
+  <launchable type="desktop-id">io.github.felipe_abreu.Clypse.desktop</launchable>
+  <provides>
+    <binary>clypse</binary>
+    <binary>clypse-daemon</binary>
+    <binary>clypse-applet</binary>
+  </provides>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Clipboard history with instant search</caption>
+      <image>https://raw.githubusercontent.com/Felipe-Abreu/Clypse/v0.2.0/assets/screenshot-history.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Full-text search across the entire history</caption>
+      <image>https://raw.githubusercontent.com/Felipe-Abreu/Clypse/v0.2.0/assets/screenshot-search.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Pinned favorite items</caption>
+      <image>https://raw.githubusercontent.com/Felipe-Abreu/Clypse/v0.2.0/assets/screenshot-favorites.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Preferences</caption>
+      <image>https://raw.githubusercontent.com/Felipe-Abreu/Clypse/v0.2.0/assets/screenshot-preferences.png</image>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="0.2.0" date="2026-09-03">
+      <description>
+        <p>COSMIC panel applet, Flatpak support and verified app identity.</p>
+        <ul>
+          <li>New COSMIC panel applet (libcosmic) with quick history popup</li>
+          <li>App ID renamed to io.github.felipe_abreu.Clypse</li>
+          <li>Daemon is auto-started without systemd (Flatpak-friendly)</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.1.0" date="2026-05-15">
+      <description><p>Initial release. Complete architectural rewrite in Rust.</p></description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1"/>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+  <recommends>
+    <display_length compare="ge">360</display_length>
+  </recommends>
+  <categories>
+    <category>Utility</category>
+  </categories>
+  <keywords>
+    <keyword>clipboard</keyword>
+    <keyword>history</keyword>
+    <keyword>copy</keyword>
+    <keyword>paste</keyword>
+  </keywords>
+</component>

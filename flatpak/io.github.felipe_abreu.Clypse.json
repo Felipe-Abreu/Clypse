@@ -37,7 +37,7 @@
           "type": "git",
           "url": "https://github.com/Felipe-Abreu/Clypse.git",
           "tag": "v0.2.0",
-          "commit": "SUBSTITUA-PELO-HASH-COMPLETO-DA-TAG",
+          "commit": "7c7df148dc7bb0d2039dd509028b69abfca15842",
           "x-checker-data": {
             "type": "git",
             "tag-pattern": "^v([\\d.]+)$"

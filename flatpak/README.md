@@ -1,7 +1,7 @@
 # Empacotamento Flatpak do Clypse
 
-Arquivos para publicar o Clypse no Flathub. O guia completo (avaliação,
-tutorial em seis fases, submissão) está em [`docs/FLATHUB.md`](../docs/FLATHUB.md).
+Arquivos para publicar o Clypse no Flathub, seguindo o
+[guia de submissão do Flathub](https://docs.flathub.org/docs/for-app-authors/submission).
 
 ## Arquivos
 
